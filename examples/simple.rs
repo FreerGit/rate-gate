@@ -1,7 +1,7 @@
 use std::thread;
 use std::time::Duration;
 
-use rate_limiter::Limiter;
+use rate_gate::Limiter;
 
 fn main() {
     // Create a new rate limiter
