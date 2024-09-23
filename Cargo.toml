@@ -1,12 +1,12 @@
 [package]
-name = "rate-limiter"
+name = "rate-gate"
 version = "0.1.0"
 edition = "2021"
 description = "Easily time a block of code"
 license = "MIT"
 repository = "https://github.com/freergit/timing.git"
 readme = "README.md"
-keywords = ["rate-limit", "limiter" , "limiting", "rate", "bucket"]
+keywords = ["rate-limit", "limiter" , "limiting", "rate", "bucket", "rate-gate"]
 
 [dependencies]
 hashbrown = "0.14.5"
