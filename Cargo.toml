@@ -2,9 +2,9 @@
 name = "rate-gate"
 version = "0.1.1"
 edition = "2021"
-description = "Easily time a block of code"
+description = "Easy and thread-safe rate limiter"
 license = "MIT"
-repository = "https://github.com/freergit/timing.git"
+repository = "https://github.com/FreerGit/rate-gate.git"
 readme = "README.md"
 keywords = ["rate-limit", "limit" , "limiting", "rate", "rate-gate"]
 
