@@ -55,7 +55,7 @@ where
     ///
     /// ### returns:
     ///
-    /// `None` -> entity was not found by the limiter, create one.
+    /// `None` -> entity was not found by the limiter, create one with `add_limited_entity`.
     ///
     /// `Some(false)` -> entity is rate limited, no requests to consume.
     ///

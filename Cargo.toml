@@ -2,6 +2,15 @@
 name = "rate-limiter"
 version = "0.1.0"
 edition = "2021"
+description = "Easily time a block of code"
+license = "MIT"
+repository = "https://github.com/freergit/timing.git"
+readme = "README.md"
+keywords = ["rate-limit", "limiter" , "limiting", "rate", "bucket"]
 
 [dependencies]
 hashbrown = "0.14.5"
+
+[dev-dependencies]
+hyper = { version = "0.14", features = ["full"]}
+tokio = { version = "1", features = ["full"] }
