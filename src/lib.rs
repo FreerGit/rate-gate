@@ -49,6 +49,18 @@ where
         );
     }
 
+    /// Removes a entity from the limiter
+    ///
+    /// Removes a key from the map, returning the value at the key if the key was previously in the map.
+    /// Keeps the allocated memory for reuse.
+    ///
+    /// The key may be any borrowed form of the map's key type,
+    /// but Hash and Eq on the borrowed form must match those for the key type.
+    pub fn remove_limited_entity(&self, entity: T) -> Option<AssociatedEntity> {
+        let mut requests = self.requests.lock().unwrap();
+        requests.remove(&entity)
+    }
+
     /// Checks whether a entity has requests left to consume.
     ///
     /// `entity` has been added by you previously with `add_limited_entity`
@@ -147,9 +159,9 @@ mod tests {
         let mut limiter: Limiter<&str> = Limiter::new();
         limiter.add_limited_entity("user1", 2, Duration::from_secs(60));
 
-        assert_eq!(limiter.is_entity_limited(&"user1"), Some(true)); // 1st request
-        assert_eq!(limiter.is_entity_limited(&"user1"), Some(true)); // 2nd request
-        assert_eq!(limiter.is_entity_limited(&"user1"), Some(false)); // 3rd request, should be limited
+        assert_eq!(limiter.is_entity_limited(&"user1"), Some(true));
+        assert_eq!(limiter.is_entity_limited(&"user1"), Some(true));
+        assert_eq!(limiter.is_entity_limited(&"user1"), Some(false));
     }
 
     #[test]
@@ -225,15 +237,89 @@ mod tests {
             );
         });
 
-        // Wait for all threads to finish
         thread1.join().unwrap();
         thread2.join().unwrap();
         thread3.join().unwrap();
 
-        // After 5 requests, the next request should be limited
         assert_eq!(
             limiter.lock().unwrap().is_entity_limited(&"user1"),
             Some(false)
         );
+    }
+
+    #[test]
+    fn test_remove_limited_entity() {
+        let mut limiter: Limiter<&str> = Limiter::new();
+        limiter.add_limited_entity("user1", 5, Duration::from_secs(60));
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(requests.contains_key("user1"));
+        }
+
+        let removed_entity_exact = limiter.remove_limited_entity("user1");
+
+        assert!(removed_entity_exact.is_some());
+        assert_eq!(removed_entity_exact.unwrap().bucket_max, 5);
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(!requests.contains_key("user1"));
+        }
+
+        let removed_non_existent = limiter.remove_limited_entity("unknown_user");
+        assert!(removed_non_existent.is_none());
+
+        assert_eq!(limiter.is_entity_limited(&"user1"), None);
+
+        limiter.add_limited_entity("user2", 5, Duration::from_secs(60));
+        let borrowed_key: &str = "user2";
+        let removed_entity_borrowed = limiter.remove_limited_entity(borrowed_key);
+
+        assert!(removed_entity_borrowed.is_some());
+        assert_eq!(removed_entity_borrowed.unwrap().bucket_max, 5);
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(!requests.contains_key("user2"));
+        }
+    }
+
+    #[test]
+    fn test_remove_limited_entity_memory_reuse() {
+        let limiter: Limiter<&str> = Limiter::new();
+
+        limiter.add_limited_entity("user1", 5, Duration::from_secs(60));
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(requests.contains_key("user1"));
+        }
+
+        let removed_entity = limiter.remove_limited_entity("user1");
+        assert!(removed_entity.is_some());
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(!requests.contains_key("user1"));
+        }
+
+        limiter.add_limited_entity("user1", 10, Duration::from_secs(120));
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(requests.contains_key("user1"));
+            assert_eq!(requests["user1"].bucket_max, 10);
+            assert_eq!(requests["user1"].bucket, 10); // Should reflect the new bucket max
+        }
+
+        let removed_entity_after_reuse = limiter.remove_limited_entity("user1");
+        assert!(removed_entity_after_reuse.is_some());
+        assert_eq!(removed_entity_after_reuse.unwrap().bucket_max, 10);
+
+        {
+            let requests = limiter.requests.lock().unwrap();
+            assert!(!requests.contains_key("user1"));
+        }
     }
 }
