@@ -93,6 +93,20 @@ where
             None
         }
     }
+
+    /// Returns the current amount of requests left in the entity's bucket.
+    ///
+    /// `entity` has been added by you previously with `add_limited_entity`
+    ///
+    /// ### returns:
+    ///
+    /// `None` -> entity was not found by the limiter, create one with `add_limited_entity`.
+    ///
+    /// `Some(usize)` -> the current number of requests left in the entity's bucket.
+    pub fn get_bucket_remaining(&self, entity: &T) -> Option<usize> {
+        let requests = self.requests.lock().unwrap();
+        requests.get(entity).map(|entry| entry.bucket)
+    }
 }
 
 #[cfg(test)]
@@ -321,5 +335,25 @@ mod tests {
             let requests = limiter.requests.lock().unwrap();
             assert!(!requests.contains_key("user1"));
         }
+    }
+
+    #[test]
+    fn test_get_bucket_remaining() {
+        let mut limiter: Limiter<&str> = Limiter::new();
+
+        assert_eq!(limiter.get_bucket_remaining(&"user1"), None);
+
+        limiter.add_limited_entity("user1", 5, Duration::from_secs(60));
+
+        assert_eq!(limiter.get_bucket_remaining(&"user1"), Some(5));
+
+        limiter.is_entity_limited(&"user1");
+
+        assert_eq!(limiter.get_bucket_remaining(&"user1"), Some(4));
+
+        limiter.is_entity_limited(&"user1");
+        limiter.is_entity_limited(&"user1");
+
+        assert_eq!(limiter.get_bucket_remaining(&"user1"), Some(2));
     }
 }
